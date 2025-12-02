@@ -45,14 +45,16 @@ def build_packet():
     # packet = header + data
     # return packet
     #Code End
+    return
 
-def get_route(hostname):
+def get_route(hostname: str):
     timeLeft = TIMEOUT
-    for ttl in range(1,MAX_HOPS):
+    for ttl in range(1, MAX_HOPS):
         for tries in range(TRIES):
             destAddr = gethostbyname(hostname)
             #Code Start
             # Make a raw socket named mySocket
+            mySocket = socket(AF_INET, SOCK_RAW)
             #Code End
             mySocket.setsockopt(IPPROTO_IP, IP_TTL, struct.pack('I',ttl))
             mySocket.settimeout(TIMEOUT)
@@ -75,6 +77,7 @@ def get_route(hostname):
             else:
                 #Code Start
                 # Fetch the icmp type from the IP packet
+                request_type = 0
                 #Code End
                 if request_type == 11:
                     bytes = struct.calcsize("d")
@@ -93,4 +96,5 @@ def get_route(hostname):
                     break
             finally:
                 mySocket.close()
+
 get_route("google.com")
