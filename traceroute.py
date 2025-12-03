@@ -35,7 +35,9 @@ def checksum(string):
 
 def build_packet():
     #Code Start
-    # In the sendOnePing() method of the ICMP Ping exercise,firstly the header of our
+    myChecksum = 0
+
+    # In the sendOnePing() method of the ICMP Ping exercise, firstly the header of our
     # packet to be sent was made, secondly the checksum was appended to the header and
     # then finally the complete packet was sent to the destination.
     # Make the header in a similar way to the ping exercise.
@@ -44,8 +46,32 @@ def build_packet():
     # So the function ending should look like this
     # packet = header + data
     # return packet
+
+    icmpEchoRequestType = 8
+    icmpEchoRequestCode = 0
+    # Define icmpEchoRequestType and
+    # icmpEchoRequestCode, which are both used below
+    # Code End
+    myID = os.getpid() & 0xFFFF  # Return the current process i
+
+    header = struct.pack("bbHHh", icmpEchoRequestType, icmpEchoRequestCode, myChecksum, myID, 1)
+
+    data = struct.pack("d", time.time())
+    # Calculate the checksum on the data and the dummy header.
+    myChecksum = checksum(header + data)
+
+    # Get the right checksum, and put in the header
+    if sys.platform == 'darwin':
+        myChecksum = htons(myChecksum) & 0xffff
+    # Convert 16-bit integers from host to network byte order.
+    else:
+        myChecksum = htons(myChecksum)
+
+    header = struct.pack("bbHHh", icmpEchoRequestType, icmpEchoRequestCode, myChecksum, myID, 1)
+    packet = header + data
+
+    return packet
     #Code End
-    return
 
 def get_route(hostname: str):
     timeLeft = TIMEOUT
@@ -54,7 +80,9 @@ def get_route(hostname: str):
             destAddr = gethostbyname(hostname)
             #Code Start
             # Make a raw socket named mySocket
-            mySocket = socket(AF_INET, SOCK_RAW)
+
+            icmp = getprotobyname("icmp")
+            mySocket = socket(AF_INET, SOCK_RAW, icmp)
             #Code End
             mySocket.setsockopt(IPPROTO_IP, IP_TTL, struct.pack('I',ttl))
             mySocket.settimeout(TIMEOUT)
@@ -77,7 +105,8 @@ def get_route(hostname: str):
             else:
                 #Code Start
                 # Fetch the icmp type from the IP packet
-                request_type = 0
+                header = recvPacket[20:28]
+                request_type, _, _, _, _ = struct.unpack("bbHHh", header)
                 #Code End
                 if request_type == 11:
                     bytes = struct.calcsize("d")
@@ -97,4 +126,4 @@ def get_route(hostname: str):
             finally:
                 mySocket.close()
 
-get_route("google.com")
+get_route("archlinux.org")
